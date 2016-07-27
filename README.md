@@ -9,6 +9,9 @@
 - [Managing users](#managing-users)
 - [Device API](#device-API)
 - [Deploying the web application](#deploying-the-web-application)
+ - [Example deployment to Microsoft Azure](#example-deployment-to-microsoft-azure)
+  - [Creating and deploying the database](#creating-and-deploying-the-database)
+  - [Deploying the Web App](#deploying-the-web-app)
 
 ## Quick Start ##
 **Requires**: [Visual Studio 2013](https://www.visualstudio.com/downloads/download-visual-studio-vs) (Community or Express for Web are both fine)
@@ -74,3 +77,33 @@ The OpenXC Cellular C5 interacts with three API endpoints in the demo server:
 
 ## Deploying the web application ##
 For assistance in deploying the web application to an external hosting provider, see [How to: Deploy a Web Project Using One-Click Publish in Visual Studio](https://msdn.microsoft.com/en-us/library/dd465337(v=vs.110).aspx).
+
+### Example deployment to Microsoft Azure ###
+This deployment scenario makes use of:
+
+- A [Microsoft Azure account](https://azure.microsoft.com)
+- A [SQL Azure database](https://azure.microsoft.com/en-us/services/sql-database/)
+- A [Microsoft Azure Web App](https://azure.microsoft.com/en-us/services/app-service/web/)
+
+#### Creating and deploying the database ####
+- Follow the [SQL Azure get started guide](https://azure.microsoft.com/en-us/documentation/articles/sql-database-get-started/) to create a database we will use for the OpenXC WebServer. Make sure to remember the database name and login credentials. Also, if you plan to access the database from anywhere other than the production web server, you must add that IP address to the database firewall whitelist (instructions available at the above link).
+- Once you have the database created, open the database in the Azure portal. You can find it quickly by typing the database name in the top bar in the portal (in the box labeled "Search resources"). In the top "Essentials" section, you will see a link labeled "Show database connection strings". Click that and copy the  "ADO.NET(SQL authentiction)" connection string. It will look something like:
+ `Server=tcp:{yourServerName}.database.windows.net,1433;Initial Catalog={yourDatabaseName};Persist Security Info=False;User ID={yourUserId};Password={yourPassword};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;`
+- To deploy the database schema to SQL Azure, go back to the "Package Manager Console" in Visual Studio and execute the command (substituting the connection string you copied from the Azure portal):
+ `update-database -ConnectionProviderName "System.Data.SqlClient"  -ConnectionString "{connection string from Azure portal with your username/password added}`
+- Upon successful completion of the above command, the database should have been published and the `Seed()` method will have been run to add the initial user to the database. Remember the connection string as we will use it when deploying the application.
+
+#### Deploying the Web App ####
+Depending on which version of Visual Studio you are using, this process may be slightly different. See the [official Web App documentation](https://azure.microsoft.com/en-us/documentation/articles/app-service-web-get-started/) for more up-to-date information. The following steps are for Visual Studio 2013.
+
+- In Visual Studio, right-click on the **OpenXC.Web** project and choose "Publish...".
+- Select "Microsoft Azure Web Apps".
+- If you are not already signed-in to your Microsoft Azure account, do so.
+- Pick "New..." to create a new Web App.
+- Fill out the subsequent form. For "Database server:" chose "No database" for now.
+- Press "Create"
+- Once provisioning has been completed, you will be shown the "Connection" tab of the publish wizard with all of the required values pre-populated. Click "Next >".
+- In the "Settings" tab, copy the connection string you used above in the `update-database -ConnectionProviderName...` command (it starts with `Server=tcp:{yourServerName}.database.windows.net,1433...`) into the box labeled **OpenXCDbContext (OpenXCDbEntities)**. Make sure "Use this connection string at runtime (update destination web.config)" is **checked** and "Execute Code First Migrations (runs on application start)" is **not checked** (because we already did that manually above). Click "Next".
+- Click "Publish"!
+- Visual studio will open a browser window (or you can do it yourself to) **http://{yourWebAppName}.azurewebsites.net**.
+- You should be able to log-in using the default admin account. It is advised that you replace the default admin account or at least change the password by clicking the "Change password" link on **http://{yourWebAppName}.azurewebsites.net/users**.
